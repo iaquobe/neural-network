@@ -9,7 +9,7 @@ def sigmoid_der(sig):
     return sig*(1 - sig)
 
 
-vec_sig_der = np.vectorize(sigmoid_der())
+vec_sig_der = np.vectorize(sigmoid_der)
 vec_sig = np.vectorize(sigmoid)
 
 
@@ -24,36 +24,59 @@ class NeuralNetwork:
         self.activation_grad = []
 
         for i in range(1, len(layers)):
-            self.weights.append(np.random.uniform(-2, 2, (layers[i-1], layers[i])))
+            self.weights.append(np.random.uniform(-2, 2, (layers[i], layers[i - 1])))
             self.biases.append(np.random.uniform(-2, 2, (1, layers[i])))
 
-            self.weights_grad.append(np.zeros(layers[i - 1], layers[i]))
-            self.biases_grad.append(np.zeros(1, layers[i]))
-            self.activation_grad.append(np.zeros(layers[i - 1]))
+            self.weights_grad.append(np.zeros((layers[i], layers[i - 1])))
+            self.biases_grad.append(np.zeros((1, layers[i])))
+            self.activation_grad.append(np.zeros((layers[i - 1])))
 
     def predict(self, x):
-        activations = [x]
+        a = [x]
         z = []
+        a_i = x
         for i in range(len(self.weights)):
-            z_t = np.dot(self.weights[i], x) - self.biases[i]
-            x = vec_sig(z_t)
-            activations.append(x)
-            z.append(z)
-        return x, activations, z
+            z_i = np.matmul(self.weights[i], a_i) + self.biases[i]
+            a_i = vec_sig(z_i).flatten()
+            a.append(a_i)
+            z.append(z_i)
+        return a_i, a, z
 
-    def eval(self, x, y):
-        y_ac, activations, zs = self.predict(x)
-        ac_der = 2 * (y_ac - y)
+    def eval(self, x, y_l):
+        y_p, a, z = self.predict(x)
+        z_d = 2 * (y_p - y_l)
 
-        for i in range(len(self.weights) - 1, 0, -1):
-            ac_der = ac_der * vec_sig_der(activations[i + 1])
-            self.biases_grad += ac_der
-            self.weights_grad += np.dot(ac_der, np.transpose(activations[i]))
-            self.activation_grad += np.dot(ac_der, np.transpose(self.weights[i]))
+        for i in range(len(self.weights) - 1, -1, -1):
+            z_d = z_d * vec_sig_der(a[i + 1])
+
+            # b_d(i) = z_d(i)
+            self.biases_grad[i] += z_d
+
+            # w_d(i) = z_d(i) * a(i + 1)T
+            w_d = np.matmul(z_d[None].T, a[i][None])
+            self.weights_grad[i] += w_d
+
+            # a_d(i - i) = z_d(i) *
+            t_w = np.transpose(self.weights[i])
+            z_d = np.matmul(t_w, z_d)
+            self.activation_grad[i] += z_d
+        return y_p, np.sum(y_l - y_p)
 
     def apply_grad(self, lr):
+        s = 0
         for i in range(len(self.weights)):
-            self.weights[i] += lr * self.weights_grad[i]
-            self.biases[i] += lr * self.biases_grad[i]
+            s += np.sum(self.weights[i])
+            s += np.sum(self.biases[i])
+        lr = lr / abs(s)
+        for i in range(len(self.weights)):
+            self.weights[i] -= lr * self.weights_grad[i]
+            self.biases[i] -= lr * self.biases_grad[i]
             self.weights_grad[i] = np.zeros(self.weights_grad[i].shape)
             self.biases_grad[i] = np.zeros(self.biases_grad[i].shape)
+
+    def train_batch(self, x_s, y_l):
+        s_c = 0
+        for x, y in zip(x_s, y_l):
+            _, c_t = self.eval(x, y)
+            s_c += c_t
+        return s_c / len(x_s)
