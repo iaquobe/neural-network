@@ -74,9 +74,10 @@ class NeuralNetwork:
             self.weights_grad[i] = np.zeros(self.weights_grad[i].shape)
             self.biases_grad[i] = np.zeros(self.biases_grad[i].shape)
 
-    def train_batch(self, x_s, y_l):
+    def train_batch(self, x_s, y_l, lr):
         s_c = 0
         for x, y in zip(x_s, y_l):
             _, c_t = self.eval(x, y)
             s_c += c_t
+        self.apply_grad(lr)
         return s_c / len(x_s)
