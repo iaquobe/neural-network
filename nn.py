@@ -37,7 +37,7 @@ class NeuralNetwork:
         a_i = x
         for i in range(len(self.weights)):
             z_i = np.matmul(self.weights[i], a_i) + self.biases[i]
-            a_i = vec_sig(z_i).flatten()
+            a_i = vec_sig(z_i.flatten())
             a.append(a_i)
             z.append(z_i)
         return a_i, a, z
@@ -74,7 +74,11 @@ class NeuralNetwork:
             self.weights_grad[i] = np.zeros(self.weights_grad[i].shape)
             self.biases_grad[i] = np.zeros(self.biases_grad[i].shape)
 
-    def train_batch(self, x_s, y_l, lr):
+    def train_batch(self, x_s, y_l, lr, size):
+        if size != x_s.shape[0]:
+            idx = np.random.choice(len(x_s), size, replace=False)
+            x_s = x_s[idx]
+            y_l = y_l[idx]
         s_c = 0
         for x, y in zip(x_s, y_l):
             _, c_t = self.eval(x, y)

@@ -1,15 +1,20 @@
 from nn import NeuralNetwork
 import numpy as np
+import mnist
 
-x = np.transpose(np.array([0, 1]))
-y = np.transpose(np.array([1, 0]))
-nn = NeuralNetwork((2, 4, 2))
-res, _, _ = nn.predict(x)
-print("\nvor training")
-print("[0,1] -> {0}".format(res))
-for i in range(10000):
-    _, t = nn.eval(x, y)
-    nn.apply_grad(.05)
-res, _, _ = nn.predict(x)
-print("nach training")
-print("[0,1] -> {0}".format(res))
+images = mnist.train_images()
+images = images.reshape(images.shape[0], images.shape[1] * images.shape[2]) / 255
+labels = mnist.train_labels()
+labels_oh = np.array([np.zeros(10) for a in labels])
+for oh, idx in zip(labels_oh, labels):
+    np.put(oh, idx, 1)
+
+nn = NeuralNetwork((images.shape[1], 16, 16, 10))
+for i in range(100):
+    print(nn.train_batch(images, labels_oh, 0.05, 100))
+
+idx = np.random.choice(images.shape[0], 1)
+image = images[idx].reshape(-1)
+prediction, _, _ = nn.predict(images[idx].reshape(-1,))
+print(np.argmax(prediction))
+print(labels[idx])
