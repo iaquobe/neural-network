@@ -5,8 +5,8 @@ def sigmoid(x):
     return 1/(1 + 2.71828**-x)
 
 
-def sigmoid_der(sig):
-    return sig*(1 - sig)
+def sigmoid_der(x):
+    return sigmoid(x) * (1 - sigmoid(x))
 
 
 vec_sig_der = np.vectorize(sigmoid_der)
@@ -34,25 +34,26 @@ class NeuralNetwork:
     def predict(self, x):
         a = [x]
         z = []
-        a_i = x
-        for i in range(len(self.weights)):
-            z_i = np.matmul(self.weights[i], a_i) + self.biases[i]
-            a_i = vec_sig(z_i.flatten())
-            a.append(a_i)
+        activation = x
+        for weights, bias in zip(self.weights, self.biases):
+            z_i = np.matmul(weights, activation) + bias
+            activation = vec_sig(z_i.flatten())
+            a.append(activation)
             z.append(z_i)
-        return a_i, a, z
+        return activation, a, z
 
-    def eval(self, x, y_l):
+    def gradient_descend(self, x, y_l):
         y_p, a, z = self.predict(x)
         z_d = 2 * (y_p - y_l)
 
         for i in range(len(self.weights) - 1, -1, -1):
-            z_d = z_d * vec_sig_der(a[i + 1])
+            sig_der = vec_sig_der(a[i + 1])
+            z_d = z_d * sig_der
 
             # b_d(i) = z_d(i)
             self.biases_grad[i] += z_d
 
-            # w_d(i) = z_d(i) * a(i + 1)T
+            # w_d(i) = z_d(i) * a(i +vec_sig_der(a[i + 1]) 1)T
             w_d = np.matmul(z_d[None].T, a[i][None])
             self.weights_grad[i] += w_d
 
@@ -60,7 +61,7 @@ class NeuralNetwork:
             t_w = np.transpose(self.weights[i])
             z_d = np.matmul(t_w, z_d)
             self.activation_grad[i] += z_d
-        return y_p, np.sum(y_l - y_p)
+        return y_p, np.sum((y_l - y_p)**2)
 
     def apply_grad(self, lr):
         s = 0
@@ -74,14 +75,33 @@ class NeuralNetwork:
             self.weights_grad[i] = np.zeros(self.weights_grad[i].shape)
             self.biases_grad[i] = np.zeros(self.biases_grad[i].shape)
 
-    def train_batch(self, x_s, y_l, lr, size):
-        if size != x_s.shape[0]:
-            idx = np.random.choice(len(x_s), size, replace=False)
+    def train_batch(self, x_s, y_l, lr, size=None):
+        if size is not None and size != x_s.shape[0]:
+            idx = np.random.choice(x_s.shape[0], size, replace=False)
             x_s = x_s[idx]
             y_l = y_l[idx]
         s_c = 0
         for x, y in zip(x_s, y_l):
-            _, c_t = self.eval(x, y)
+            _, c_t = self.gradient_descend(x, y)
             s_c += c_t
         self.apply_grad(lr)
         return s_c / len(x_s)
+
+    def eval(self, x_s, y_l, size=None):
+        if size is not None and size != x_s.shape[0]:
+            idx = np.random.choice(x_s.shape[0], size, replace=False)
+            x_s = x_s[idx]
+            y_l = y_l[idx]
+        else:
+            size = x_s.shape[0]
+
+        correct = 0
+        for x, y in zip(x_s, y_l):
+            prediction, _, _ = self.predict(x)
+            guess = np.argmax(prediction)
+            label = np.argmax(y)
+            if guess == label:
+                correct += 1
+            else:
+                print("guess={0}, label={1}".format(guess, label))
+        return correct / size
