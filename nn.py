@@ -14,22 +14,28 @@ vec_sig = np.vectorize(sigmoid)
 
 
 class NeuralNetwork:
-    def __init__(self, layers):
+    def __init__(self, layers=None, file=None):
         self.weights = []
         self.biases = []
 
-        self.activations = []
         self.weights_grad = []
         self.biases_grad = []
         self.activation_grad = []
 
-        for i in range(1, len(layers)):
-            self.weights.append(np.random.uniform(-2, 2, (layers[i], layers[i - 1])))
-            self.biases.append(np.random.uniform(-2, 2, (1, layers[i])))
+        if layers is not None:
+            for i in range(1, len(layers)):
+                self.weights.append(np.random.uniform(-2, 2, (layers[i], layers[i - 1])))
+                self.biases.append(np.random.uniform(-2, 2, (1, layers[i])))
 
-            self.weights_grad.append(np.zeros((layers[i], layers[i - 1])))
-            self.biases_grad.append(np.zeros((1, layers[i])))
-            self.activation_grad.append(np.zeros((layers[i - 1])))
+                self.weights_grad.append(np.zeros((layers[i], layers[i - 1])))
+                self.biases_grad.append(np.zeros((1, layers[i])))
+                self.activation_grad.append(np.zeros((layers[i - 1])))
+        elif file is not None:
+            self.load(file)
+            for weights, biases in zip(self.weights, self.biases):
+                self.weights_grad.append(np.zeros(weights.shape))
+                self.biases_grad.append(np.zeros(biases.shape))
+                self.activation_grad.append(np.zeros(weights.shape[1]))
 
     def predict(self, x):
         a = [x]
@@ -105,3 +111,14 @@ class NeuralNetwork:
             else:
                 print("guess={0}, label={1}".format(guess, label))
         return correct / size
+
+    def save(self, file):
+        tmp_bias = [x.T for x in self.biases]
+        np.savez(file, weights=self.weights, biases=tmp_bias)
+
+    def load(self, file):
+        f = np.load(file)
+        weights = [m for m in f["weights"]]
+        biases = [b.T for b in f["biases"]]
+        self.weights = weights
+        self.biases = biases
