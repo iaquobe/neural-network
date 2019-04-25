@@ -15,5 +15,5 @@ def train(nn):
 # nn.save("nn.npz")
 
 nn.load("nn.npz")
-print("{0}".format(nn.eval(x, y)))
+print("{0}".format(nn.evaluate_network(x, y)))
 

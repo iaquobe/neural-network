@@ -48,9 +48,15 @@ class NeuralNetwork:
             z.append(z_i)
         return activation, a, z
 
-    def gradient_descend(self, x, y_l):
-        y_p, a, z = self.predict(x)
-        z_d = 2 * (y_p - y_l)
+    def gradient_descend(self, x, y_l=None, gradient=None):
+
+        if y_l is not None:
+            y_p, a, z = self.predict(x)
+            z_d = 2 * (y_p - y_l)
+        elif gradient is not None:
+            z_d = gradient
+        else:
+            raise Exception("parameters not valid")
 
         for i in range(len(self.weights) - 1, -1, -1):
             sig_der = vec_sig_der(a[i + 1])
@@ -93,7 +99,13 @@ class NeuralNetwork:
         self.apply_grad(lr)
         return s_c / len(x_s)
 
-    def eval(self, x_s, y_l, size=None):
+    def train_on_gradient(self, x_s, gradients, lr):
+        for x, g in zip(x_s, gradients):
+            self.gradient_descend(x, gradient=g)
+
+        self.apply_grad(lr)
+
+    def evaluate_network(self, x_s, y_l, size=None):
         if size is not None and size != x_s.shape[0]:
             idx = np.random.choice(x_s.shape[0], size, replace=False)
             x_s = x_s[idx]

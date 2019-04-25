@@ -23,7 +23,7 @@ size = 10
 nn.train_batch(network_inputs, network_labels, learning_rate, size=size)
 
 # evaluate network: returns correct guesses in percent
-nn.eval(network_inputs, network_labels, size=size)
+nn.evaluate_network(network_inputs, network_labels, size=size)
 
 # save network
 nn.save("filename.npz")
